@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Simple Shooting Game</title>
+  <style>
+    body { margin: 0; padding: 0; }
+    canvas { background: #000; display: block; margin: 0 auto; }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="400" height="600"></canvas>
+  <script>
+    // -----------------------------
+    // ① ゲームに必要な変数・オブジェクトの定義
+    // -----------------------------
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    // プレイヤーの情報
+    const player = {
+      x: canvas.width / 2,   // プレイヤーのX座標（中央に配置）
+      y: canvas.height - 50, // プレイヤーのY座標（画面下部）
+      width: 30,
+      height: 30,
+      speed: 5,
+      color: "white"
+    };
+
+    // 弾と敵を管理する配列
+    let bullets = [];
+    let enemies = [];
+
+    // キーの押下状態を管理するオブジェクト
+    const keys = {
+      ArrowLeft: false,
+      ArrowRight: false,
+      Space: false
+    };
+
+    // ゲームのフレームカウントやスコア管理用
+    let frameCount = 0;
+    let score = 0;
+
+    // -----------------------------
+    // ② キー入力のイベントリスナー
+    // -----------------------------
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "ArrowLeft") {
+        keys.ArrowLeft = true;
+      } else if (e.code === "ArrowRight") {
+        keys.ArrowRight = true;
+      } else if (e.code === "Space") {
+        keys.Space = true;
+      }
+    });
+
+    window.addEventListener("keyup", (e) => {
+      if (e.code === "ArrowLeft") {
+        keys.ArrowLeft = false;
+      } else if (e.code === "ArrowRight") {
+        keys.ArrowRight = false;
+      } else if (e.code === "Space") {
+        keys.Space = false;
+      }
+    });
+
+    // -----------------------------
+    // ③ ゲームを更新する処理
+    // -----------------------------
+    function update() {
+      frameCount++;
+
+      // プレイヤーの移動
+      if (keys.ArrowLeft && player.x > 0) {
+        player.x -= player.speed;
+      }
+      if (keys.ArrowRight && player.x + player.width < canvas.width) {
+        player.x += player.speed;
+      }
+
+      // スペースキーが押されたタイミングで弾を発射
+      // （連射が速すぎないようにある程度間隔を設定）
+      if (keys.Space && frameCount % 10 === 0) {
+        spawnBullet();
+      }
+
+      // 弾を移動させる
+      bullets.forEach((bullet, index) => {
+        bullet.y -= bullet.speed;
+        // 画面外に出た弾を削除
+        if (bullet.y + bullet.height < 0) {
+          bullets.splice(index, 1);
+        }
+      });
+
+      // 敵キャラを出現させる（一定フレームごとに敵を追加）
+      if (frameCount % 60 === 0) {
+        spawnEnemy();
+      }
+
+      // 敵を移動させる
+      enemies.forEach((enemy, eIndex) => {
+        enemy.y += enemy.speed;
+
+        // 弾と敵の衝突判定
+        bullets.forEach((bullet, bIndex) => {
+          if (isColliding(bullet, enemy)) {
+            // 衝突した弾と敵を削除
+            bullets.splice(bIndex, 1);
+            enemies.splice(eIndex, 1);
+            score++;
+          }
+        });
+
+        // 敵が画面下まで到達したら削除
+        if (enemy.y > canvas.height) {
+          enemies.splice(eIndex, 1);
+        }
+      });
+    }
+
+    // -----------------------------
+    // ④ 各種オブジェクトの描画処理
+    // -----------------------------
+    function draw() {
+      // 画面をクリア
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // プレイヤーを描画
+      ctx.fillStyle = player.color;
+      ctx.fillRect(player.x, player.y, player.width, player.height);
+
+      // 弾を描画
+      ctx.fillStyle = "yellow";
+      bullets.forEach((bullet) => {
+        ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+      });
+
+      // 敵を描画
+      ctx.fillStyle = "red";
+      enemies.forEach((enemy) => {
+        ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+      });
+
+      // スコア表示
+      ctx.fillStyle = "white";
+      ctx.font = "20px Arial";
+      ctx.fillText("Score: " + score, 10, 30);
+    }
+
+    // -----------------------------
+    // ⑤ 弾を生成する関数
+    // -----------------------------
+    function spawnBullet() {
+      bullets.push({
+        x: player.x + player.width / 2 - 2,
+        y: player.y,
+        width: 4,
+        height: 10,
+        speed: 8
+      });
+    }
+
+    // -----------------------------
+    // ⑥ 敵を生成する関数
+    // -----------------------------
+    function spawnEnemy() {
+      // 敵のX座標はランダムに（幅内で）
+      const enemyX = Math.random() * (canvas.width - 30);
+      enemies.push({
+        x: enemyX,
+        y: -30,
+        width: 30,
+        height: 30,
+        speed: 2
+      });
+    }
+
+    // -----------------------------
+    // ⑦ 当たり判定の関数
+    // -----------------------------
+    function isColliding(a, b) {
+      return (
+        a.x < b.x + b.width &&
+        a.x + a.width > b.x &&
+        a.y < b.y + b.height &&
+        a.y + a.height > b.y
+      );
+    }
+
+    // -----------------------------
+    // ⑧ メインループ
+    // -----------------------------
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    // -----------------------------
+    // ⑨ ゲーム開始
+    // -----------------------------
+    gameLoop();
+  </script>
+</body>
+</html>
